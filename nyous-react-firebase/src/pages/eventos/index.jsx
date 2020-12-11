@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import {Form, Button, Table, Card, Container} from 'react-bootstrap';
-import { db } from '../../utils/firebaseConfig';
+import { db, storage } from '../../utils/firebaseConfig';
+import FileUploader from 'react-firebase-file-uploader';
 
 const EventosPage = () => {
 
@@ -8,6 +9,7 @@ const EventosPage = () => {
     const [nome, setNome] = useState('');
     const [descricao, setDescricao] = useState('');
     const [eventos, setEventos] = useState([]);
+    const [urlImagem, setUrlImagem] = useState('');
 
     useEffect(() => {
         listarEventos();
@@ -23,7 +25,8 @@ const EventosPage = () => {
                         return{
                             id : doc.id,
                             nome : doc.data().nome,
-                            descricao : doc.data().descricao
+                            descricao : doc.data().descricao,
+                            urlImagem : doc.data().urlImagem
 
                         }   
                     })
@@ -42,7 +45,8 @@ const EventosPage = () => {
 
         const evento = {
             nome : nome,
-            descricao : descricao
+            descricao : descricao,
+            urlImagem : urlImagem
         }
 
         if(id === 0 ){
@@ -68,6 +72,7 @@ const EventosPage = () => {
         setId(0);
         setNome('');
         setDescricao('');
+        setUrlImagem('');
     }
 
     const remover = (event) => {
@@ -93,10 +98,26 @@ const EventosPage = () => {
                     setId(doc.id);
                     setNome(doc.data().nome);
                     setDescricao(doc.data().descricao);
+                    setUrlImagem(doc.data().urlImagem);
                 });
         } catch (error) {
             console.error(error);
         }
+    }
+
+    const handleUploadError = error => {
+        console.error(error);
+    }
+
+    const handleUploadSuccess = filename => {
+        console.log('Sucesso upload: ' + filename);
+
+        storage
+            .ref('imagens')
+            .child(filename)
+            .getDownloadURL()
+            .then(url => setUrlImagem(url))
+            .catch(error => console.error(error))
     }
 
 
@@ -108,6 +129,17 @@ const EventosPage = () => {
                 <Card>
                     <Card.Body>
                         <Form onSubmit={event => salvar(event)}>
+                            <Form.Group>
+                                {urlImagem && <img src={urlImagem} style={{ width: '200px' }} /> }
+                                <FileUploader
+                                    accept="imagem/*"
+                                    name="urlImagem"
+                                    randomizeFilename
+                                    storageRef={storage.ref('imagens')}
+                                    onUploadError={handleUploadError}
+                                    onUploadSuccess={handleUploadSuccess}
+                                />
+                            </Form.Group>
                             <Form.Group controlId="formBasicNome">
                                 <Form.Label>Nome</Form.Label>
                                 <Form.Control type="text" value={nome} onChange={event => setNome(event.target.value)} placeholder="Nome do evento"></Form.Control>
@@ -125,6 +157,7 @@ const EventosPage = () => {
                 <Table striped bordered hover>
                     <thead>
                         <tr>
+                            <th></th>
                             
                             <th>Nome</th>
                             
@@ -138,6 +171,7 @@ const EventosPage = () => {
                             eventos.map((item, index) => {
                                 return (
                                     <tr key={index}>
+                                        <td><img src={item.urlImagem} style={{ width: '150px' }}/></td>
                                         <td>{item.nome}</td>
                                         <td>{item.descricao}</td>
                                         <td>
